@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>팝업 아니긴 해 온라인 리플렛</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --text: #111111;
+  --muted: #737373;
+  --line: #dbdbdb;
+  --card: #ffffff;
+}
+* {
+  box-sizing: border-box;
+  margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body {
+  overflow-x: hidden; /* ✅ 가로 스크롤 방지 */
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+}
+img { display: block; max-width: 100%; user-select: none; }
+
+/* === 상단바 === */
+.appbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 54px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 10;
+}
+.logo {
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+}
+.appbar-icons {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.icon {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* === 하단바 === */
+.bottombar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 56px;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 10;
+}
+.bottombar svg {
+  width: 26px;
+  height: 26px;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* === 메인 === */
+main {
+  padding-top: 54px;
+  padding-bottom: 56px;
+}
+.feed {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 0 20px;
+}
+
+/* === 카드 === */
+.card {
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+
+/* 헤더 */
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+.user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #eee;
+  flex-shrink: 0;
+}
+.user-meta {
+  line-height: 1.2;
+}
+.username {
+  font-weight: 600;
+  font-size: 14.5px;
+  letter-spacing: -0.2px;
+}
+.time {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* === 캐러셀 === */
+.carousel-wrap {
+  position: relative;
+  overflow: hidden;
+}
+.carousel {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+.slide {
+  scroll-snap-align: center;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+.slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* === 점 표시 (pager) === */
+.pager {
+  position: absolute;
+  left: 0; right: 0; bottom: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.5);
+  transition: all .25s ease;
+}
+.dot.active {
+  background: #fff;
+  transform: scale(1.2);
+}
+
+/* === 액션 버튼 === */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 0;
+}
+.actions-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.actions svg {
+  width: 26px;
+  height: 26px;
+  stroke: currentColor;
+  fill: none;
+  cursor: pointer;
+}
+.actions svg:active { opacity: 0.7; }
+
+/* === 좋아요 / 캡션 / 날짜 === */
+.likes {
+  font-weight: 600;
+  font-size: 14.5px;
+  padding: 6px 16px 0;
+  letter-spacing: -0.1px;
+}
+.caption-below {
+  padding: 6px 16px;
+  font-size: 14px;
+  line-height: 1.45;
+  letter-spacing: -0.1px;
+}
+.caption-below .username {
+  font-weight: 600;
+  margin-right: 4px;
+}
+.date {
+  padding: 6px 16px 14px;
+  font-size: 11.5px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+/* === 스크롤 제어 === */
+body, html {
+  overscroll-behavior-x: none; /* ✅ 바디에서 가로 스크롤 완전 차단 */
+}
+.carousel::-webkit-scrollbar { display: none; }
+</style>
+</head>
+
+<body>
+<header class="appbar">
+  <div class="logo">Instagram</div>
+  <div class="appbar-icons">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M21.8 8.4c0 6.2-8.3 11.2-9.8 12-1.5-.8-9.8-5.8-9.8-12A5.7 5.7 0 0 1 8 2.8c1.6 0 3 .7 4 1.8a5.6 5.6 0 0 1 4-1.8 5.7 5.7 0 0 1 5.8 5.6Z"/></svg>
+    <svg class="icon" viewBox="0 0 24 24"><path d="M20 21l-4-4m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/></svg>
+  </div>
+</header>
+
+<main>
+  <section class="feed" id="feed"></section>
+</main>
+
+<nav class="bottombar">
+  <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5Z"/></svg>
+  <svg viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg>
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  <svg viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-6-8-2Z"/></svg>
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
+</nav>
+
+<script>
+async function loadPosts() {
+  try {
+    const res = await fetch("posts.json");
+    if (!res.ok) throw new Error("posts.json 로드 실패");
+    const posts = await res.json();
+    const feedEl = document.getElementById("feed");
+    posts.forEach(p => feedEl.appendChild(createCard(p)));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function createCard(post) {
+  const card = document.createElement("article");
+  card.className = "card";
+
+  // --- avatar: 첫 번째 이미지 사용 ---
+  const avatarSrc = (post.images && post.images.length > 0)
+    ? post.images[0]
+    : "https://i.pravatar.cc/100?img=5";
+
+  // --- 헤더 ---
+  const head = document.createElement("div");
+  head.className = "card-head";
+  head.innerHTML = `
+    <div class="user">
+      <div class="avatar"><img src="${avatarSrc}" alt=""></div>
+      <div class="user-meta">
+        <div class="username">${escapeHTML(post.account || 'unknown')}</div>
+        <div class="time">${escapeHTML(post.date || '')}</div>
+      </div>
+    </div>
+    <div style="font-size:20px;color:#737373;">⋯</div>
+  `;
+
+  // --- 캐러셀 ---
+  const wrap = document.createElement("div");
+  wrap.className = "carousel-wrap";
+  const carousel = document.createElement("div");
+  carousel.className = "carousel";
+
+  if (Array.isArray(post.images) && post.images.length > 0) {
+    post.images.forEach(src => {
+      const slide = document.createElement("div");
+      slide.className = "slide";
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = escapeHTML(post.caption || "photo");
+      slide.appendChild(img);
+      carousel.appendChild(slide);
+    });
+  }
+  wrap.appendChild(carousel);
+
+  // --- dots (캐러셀 위치 표시) ---
+  const pager = document.createElement("div");
+  pager.className = "pager";
+  const dots = [];
+  if (post.images && post.images.length > 1) {
+    post.images.forEach((_, i) => {
+      const dot = document.createElement("div");
+      dot.className = "dot" + (i === 0 ? " active" : "");
+      pager.appendChild(dot);
+      dots.push(dot);
+    });
+    wrap.appendChild(pager);
+  }
+
+  // --- 액션 버튼 ---
+  const actions = document.createElement("div");
+  actions.className = "actions";
+  actions.innerHTML = `
+    <div class="actions-left">
+      <svg viewBox="0 0 24 24"><path d="M21.8 8.4c0 6.2-8.3 11.2-9.8 12-1.5-.8-9.8-5.8-9.8-12A5.7 5.7 0 0 1 8 2.8c1.6 0 3 .7 4 1.8a5.6 5.6 0 0 1 4-1.8 5.7 5.7 0 0 1 5.8 5.6Z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-6-8-2Z"/></svg>
+    </div>
+    <svg viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg>
+  `;
+
+  // --- 좋아요 ---
+  const likes = document.createElement("div");
+  likes.className = "likes";
+  likes.textContent = `좋아요 ${post.likes || 0}`;
+
+  // --- 캡션 (줄바꿈 & 보안 처리 포함) ---
+  const caption = document.createElement("div");
+  caption.className = "caption-below";
+  const safeCaption = escapeHTML(post.caption || "").replace(/\n/g, "<br>");
+  caption.innerHTML = `<span class="username">${escapeHTML(post.account || '')}</span>${safeCaption}`;
+
+  // --- 날짜 ---
+  const date = document.createElement("div");
+  date.className = "date";
+  date.textContent = post.date || '';
+
+  // --- 조립 ---
+  card.appendChild(head);
+  card.appendChild(wrap);
+  card.appendChild(actions);
+  card.appendChild(likes);
+  card.appendChild(caption);
+  card.appendChild(date);
+
+  if (dots.length > 0) initCarouselDots(carousel, dots);
+
+  return card;
+}
+
+// ✅ HTML escape (보안)
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function initCarouselDots(carousel, dots) {
+  const updateDots = () => {
+    const idx = Math.round(carousel.scrollLeft / carousel.clientWidth);
+    dots.forEach((d, i) => d.classList.toggle("active", i === idx));
+  };
+  carousel.addEventListener("scroll", throttle(updateDots, 100));
+}
+
+function throttle(fn, wait) {
+  let last = 0, timer;
+  return function(...args) {
+    const now = Date.now();
+    if (now - last >= wait) {
+      last = now;
+      fn.apply(this, args);
+    } else {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        last = Date.now();
+        fn.apply(this, args);
+      }, wait - (now - last));
+    }
+  };
+}
+
+loadPosts();
+</script>
+</body>
+</html>
