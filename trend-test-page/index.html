@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>트렌드 성향 테스트</title>
+  <style>
+    :root{
+      --ink:#0f172a;      /* text */
+      --muted:#475569;    /* sub text */
+      --line:#e2e8f0;     /* border */
+      --card:#ffffff;     /* surfaces */
+      --accent:#5a8cff;   /* primary accent */
+      --ok:#16a34a; --warn:#f59e0b; --violet:#7c3aed;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans"; color:var(--ink); background:#fff}
+
+    .wrap{max-width:720px; margin:0 auto; padding:20px 16px 100px}
+
+    header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px}
+    .brand{display:flex; gap:10px; align-items:center}
+    .logo{width:36px; height:36px; border-radius:10px; background:var(--card); border:1px solid var(--line); display:grid; place-items:center; box-shadow:0 6px 16px rgba(0,0,0,.06)}
+    .logo span{font-weight:800}
+    h1{font-size:clamp(20px,3.8vw,30px); margin:0}
+    .sub{color:var(--muted); font-size:14px}
+
+    .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(2,6,23,.06)}
+
+    .step{display:none}
+    .step.show{display:block}
+
+    /* 버튼 바 */
+    .actions{position:fixed; left:0; right:0; bottom:0; padding:14px 16px; background:linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.95) 30%, rgba(255,255,255,1)); border-top:1px solid var(--line)}
+    .btnrow{max-width:720px; margin:0 auto; display:flex; gap:10px;}
+    button{appearance:none; border:none; cursor:pointer; padding:14px 16px; border-radius:12px; font-weight:700; font-size:16px}
+    .primary{background:var(--accent); color:white}
+    .ghost{background:transparent; color:var(--ink); border:1px solid var(--line)}
+    .muted{background:#e5e7eb; color:#334155}
+    button[disabled]{opacity:.5; cursor:not-allowed}
+
+    /* 질문 카드 */
+    .q-title{font-weight:700; font-size:18px; line-height:1.5}
+    .scale{display:flex; flex-direction:column; gap:10px; margin-top:16px}
+    .likert{display:flex; align-items:center; justify-content:space-between; gap:clamp(6px,3vw,16px);}
+    .likert .item{position:relative; display:grid; place-items:center}
+    .likert input{position:absolute; opacity:0; width:0; height:0}
+    .dot{width:clamp(40px,12vw,60px); height:clamp(40px,12vw,60px); border-radius:999px; background:#fff; border:3px solid var(--line); box-shadow:0 2px 8px rgba(2,6,23,.06); transition:transform .1s ease, border-color .2s ease, box-shadow .2s ease}
+    .likert input:checked + .dot{border-color:var(--accent); box-shadow:inset 0 0 0 6px rgba(90,140,255,.15)}
+    .likert .item:active .dot{transform:scale(.96)}
+    .scale .labels{display:flex; justify-content:space-between; font-weight:700; color:var(--muted); padding:0 4px}
+
+    /* 진행바 */
+    .progress{height:10px; background:#ffffff; border:1px solid var(--line); border-radius:999px; overflow:hidden}
+    .bar{height:100%; width:0%; background:linear-gradient(90deg, var(--accent), #7dd3fc)}
+
+    /* 결과 카드 */
+    .result-header{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+    .tag{font-family:ui-monospace, monospace; padding:2px 6px; border:1px solid var(--line); border-radius:6px; background:#fff}
+    .gauges{display:grid; gap:10px; margin-top:12px}
+    @media (min-width:640px){ .gauges{grid-template-columns:repeat(3,1fr)} }
+    .gauge{padding:12px; border:1px solid var(--line); border-radius:12px}
+    .gauge h4{margin:0 0 8px 0; font-size:13px; color:var(--muted)}
+    .bar2{height:12px; background:#eef2ff; border-radius:999px; overflow:hidden; border:1px solid var(--line)}
+    .fill{height:100%; width:0%}
+    .fill.S{background:#60a5fa}
+    .fill.V{background:#34d399}
+    .fill.A{background:#fbbf24}
+
+    /* 해설 */
+    .section-title{margin:12px 0 6px 0; font-size:16px; font-weight:800}
+    .para{line-height:1.7}
+    .character{margin-top:10px; padding:10px 12px; border:1px dashed var(--line); border-radius:12px; background:#fafafa; color:#334155}
+    .image-slot{margin-top:14px; border:2px dashed var(--line); border-radius:12px; background:#fff; aspect-ratio:16/9; display:grid; place-items:center; color:var(--muted)}
+    .hide{display:none !important}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo"><span>TT</span></div>
+        <div>
+          <h1>트렌드 성향 테스트</h1>
+          <div class="sub">팝업 아니긴 해 · 관객 참여형 연극</div>
+        </div>
+      </div>
+      <div id="progressWrap" style="min-width:120px">
+        <div class="progress" aria-label="진행률"><div class="bar" id="prog"></div></div>
+      </div>
+    </header>
+
+    <!-- STEP 0: 소개 -->
+    <section class="card step show" id="step0">
+      <div class="center">
+        <h2 style="margin:6px 0 0 0; padding: 0 0 6px 0">내 취향 vs 유행, 나는 어떤 타입?</h2>
+        <p class="sub" style="margin:0">질문에 차례대로 답하고 마지막에 결과를 확인하세요.</p>
+        <ul class="sub" style="margin:8px 0 0 0; padding-left:18px; text-align:left">
+          <li>문항은 한 페이지에 하나씩 표시됩니다.</li>
+          <li>각 문항은 5단계 의견 선택(전혀 아니다 → 매우 그렇다)입니다.</li>
+          <li>마지막 페이지에서 결과 카드가 나타납니다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- STEP 1~10: 문항 (동적 렌더) -->
+    <section class="step" id="stepQ"><div class="card" id="qCard"></div></section>
+
+    <!-- STEP 11: 결과 -->
+    <section class="card step" id="stepR">
+      <div class="result-header">
+        <div id="badge" class="tag">타입</div>
+        <h3 id="typeName" style="margin:0">-</h3>
+      </div>
+      <div class="gauges" style="margin-top:6px">
+        <div class="gauge"><h4>S 민감도</h4><div class="bar2"><div class="fill S" id="barS"></div></div></div>
+        <div class="gauge"><h4>V 태도</h4><div class="bar2"><div class="fill V" id="barV"></div></div></div>
+        <div class="gauge"><h4>A 자율성</h4><div class="bar2"><div class="fill A" id="barA"></div></div></div>
+      </div>
+      <div class="section-title">해석 & 전략</div>
+      <div id="resultBody" class="para"></div>
+      <div id="characterNote" class="character"></div>
+      <div id="imageSlot" class="image-slot">이미지 자리</div>
+    </section>
+  </div>
+
+  <!-- 고정 버튼 바 -->
+  <div class="actions">
+    <div class="btnrow">
+      <button class="ghost" id="btnPrev" disabled>이전</button>
+      <button class="primary" id="btnNext">시작하기</button>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------------
+    // 데이터 (사용자 제공 문구 그대로)
+    // -------------------------------
+    const QUESTIONS = [
+      { id:1, text:"나는 새로운 유행·밈을 남들보다 빨리 알아차리는 편이다.", key:"S", rev:false },
+      { id:2, text:"새로 뜨는 카페·제품·앱은 직접 써보며 감을 익힌다.", key:"S", rev:false },
+      { id:3, text:"바빠도 트렌드 관련 소식은 놓치기 싫다.", key:"S", rev:false },
+      { id:4, text:"요즘 ‘유행 따라가기’ 문화가 피곤하게 느껴진다.", key:"V", rev:true },
+      { id:5, text:"유행은 재미있고 창의성을 자극한다고 느낀다.", key:"V", rev:false },
+      { id:6, text:"남들이 한다고 해서 따라하기보다 내 방식대로 한다.", key:"A", rev:false },
+      { id:7, text:"주변에서 화제여도 관심 없으면 그냥 지나친다.", key:"A", rev:false },
+      { id:8, text:"유행은 금방 식으니 큰 의미가 없다고 본다.", key:"V", rev:true },
+      { id:9, text:"한 번 관심이 생기면 깊게 파고들어 체득한다.", key:"S", rev:false },
+      { id:10, text:"요즘 흐름과 내 취향이 충돌하면 내 취향을 우선한다.", key:"A", rev:false },
+    ];
+
+    // 결과 카드용 텍스트(그대로 노출)
+    const TYPE_TEXT = {
+      "트렌드 서퍼": {
+        emoji:"🏄‍♂️",
+        body:`변화의 결을 누구보다 빨리 읽습니다. 새로운 것에 대한 감각이 뛰어나고, 남들보다 먼저 사용해보며 재미와 인사이트를 얻는 편입니다. 유행을 좇는 것이 아니라 유행 위에서 노는 사람에 가깝습니다. 시도해볼 전략 “빠른 큐레이션”이 강점이니 짧은 리뷰 콘텐츠(SNS, 블로그, 동료 공유)로 전환해보세요. 지나치게 신선함만 찾다 금방 질리는 패턴을 경계하면 더 오래갑니다. 주변인에게 “어떤 흐름이 왜 뜨는지” 설명해주면 사람들이 의존하는 인사이트 제공자가 됩니다.`,
+        character:`극 중 인물로는 ‘트렌드 왕’을 닮았군요!`
+      },
+      "트렌드 스위머": {
+        emoji:"🏊",
+        body:`유행이 주는 활기를 좋아하며, 흐름을 천천히 따라 헤엄치듯 편안하게 즐기는 타입입니다. 집착하거나 뒤처진다는 불안 없이, 필요한 만큼만 자연스럽게 흡수합니다. 시도해볼 전략 관심 분야별로 핵심만 모으는 구독 or 팔로우 리스트를 만들면 관리가 더 편해집니다. 너무 많은 정보를 걸러내다 중요한 신호를 놓칠 수 있으니 **월 1회 ‘신규 탐색 타임’**을 가져보세요. 내 취향과 트렌드가 만나는 지점을 찾으면 취미·일 모두 확장성이 생깁니다.`,
+        character:`극 중 인물로는 ‘카페 사장’을 닮았군요!`
+      },
+      "트렌드 러너": {
+        emoji:"🏃",
+        body:`정보 파악 속도가 빠르고 참여도 높지만, 뒤처지기 싫은 마음이 조금 작동할 수 있습니다. 트렌드를 잘 따라가지만, 아직 “내 방식”이 완전히 잡히지 않아 피로도가 생길 때도 있습니다. 시도해볼 전략 “왜 이걸 소비하는가?” 간단한 한 줄 메모를 남기면 소비 방향이 정리됩니다. 트렌드 중에서도 ‘가성비 높은 핵심’만 골라 체험하는 필터 전략이 도움됩니다. 필요 이상으로 비교·검색에 시간을 쓰지 않도록 사용 시간에 제한을 걸면 만족도가 올라갑니다.`,
+        character:`극 중 인물로는 허대표를 닮았군요!`
+      },
+      "트렌드 찍먹러": {
+        emoji:"🍰",
+        body:`일단 유행은 알아두지만, 깊게 뛰어들기보단 한입만 맛보는 스타일입니다. 필요할 때만 가볍게 소비하며, 큰 에너지 투입 없이도 흐름을 파악합니다. 시도해볼 전략 “가성비 높은 체험”을 미리 리스트업(카페, 전시, 앱 등)해두면 필요할 때 빠르게 선택할 수 있습니다. 주변에 ‘트렌드 잘 아는 친구’를 두면 정보 수집 비용이 더 줄어듭니다. 관심이 생긴 분야 하나 정도는 ‘장기 취향’으로 키우기 시도해보면 의외의 만족감이 큽니다.`,
+        character:`극중 인물로는 ‘마케팅 인턴 Zoe’를 닮았군요!`
+      },
+      "트렌드 불편러": {
+        emoji:"😮‍💨",
+        body:`유행이 너무 빠르고 시끄럽다고 느끼는 편입니다. 정보는 알고 있지만, 트렌드 맞추기가 피곤하거나 억지스럽게 느껴질 수 있습니다. ‘내 삶의 리듬이 더 중요하다’는 감각이 뚜렷합니다. 시도해볼 전략 트렌드 중에서도 일상 효율을 높이는 실용형만 가볍게 취사 선택해보세요(생산성 앱, 생활용품 등). “남들처럼 해야 한다”는 압박 대신, 필요한 순간에만 선택적 소비하면 스트레스가 줄어듭니다. 때때로 ‘내가 왜 불편했는지’ 적어보면 취향·가치관이 오히려 또렷해집니다.`,
+        character:`극 중 인물로는 현보은 을 닮았군요!`
+      },
+      "트렌드 밸런서": {
+        emoji:"⚖️",
+        body:`유행과 취향을 똑같이 중요한 기준으로 두는 균형형. 남들이 한다고 따라가지 않지만, 필요하다면 유연하게 받아들입니다. 센스 있는 현실감각 + 자기 취향의 뿌리가 함께 존재합니다. 시도해볼 전략 취향 리스트(좋아하는 브랜드, 콘텐츠, 스타일)를 정리해두면 타협할 때 기준이 명확해집니다. 가끔은 내 취향을 남에게 소개하거나 추천해보세요 → 관계 속에서 매력도↑ 트렌디함이 필요할 땐 ‘미니멀 적용’(한두 요소만 반영)으로 부담 없이 활용할 수 있습니다.`,
+        character:`극의 주인공 현보은이 되고싶은 모습을 벌써 이룬 당신! 대단해요!`
+      },
+      "트렌드 챌린저": {
+        emoji:"🧗",
+        body:`트렌드보다는 자기 기준, 자기 감각이 확고한 편입니다. “언젠가 사람들이 이걸 알아볼 거야”라는 미래 지향적 자기 확신이 있습니다. 대세와 달라도 흔들리지 않는 독립적인 취향. 시도해볼 전략 관심 분야 하나는 실제 결과물로 남겨보세요(컬렉션, 브런딩 기록, 작은 프로젝트). 취향의 근거(왜 좋아하는지)를 글이나 사진으로 정리하면 설득력과 자존감이 함께 올라갑니다. 트렌드와의 충돌이 계속 불편하다면, ‘얕은 연결’ 전략(한두 개만 체험)으로 사회적 맥락만 확보하면 됩니다.`,
+        character:`극 중 인물로는 현조은을 닮았군요!`
+      },
+      "트렌드를 거부하는 소나무": {
+        emoji:"🌲",
+        body:`끊임없이 바뀌는 흐름이 의미 없거나 부담스럽게 느껴지고, 일관성과 안정을 중요하게 여깁니다. 어떤 분야든 오래, 천천히, 깊게 파는 스타일로 취향의 뿌리가 단단합니다. 시도해볼 전략 트렌드를 거부한다고 해서 단절할 필요는 없습니다 → 실용적인 부분만 최소 흡수 변화가 피곤하다면, “내가 계속 유지할 것”과 “버려도 되는 것”을 구분해 일상 피로도를 줄이기 취향의 깊이를 콘텐츠(후기, 리뷰, 기록)로 남기면 오히려 리더십과 영향력이 생길 수 있습니다.`,
+        character:`극 중 인물로는 구자훈 아저씨를 닮았군요!`
+      }
+    };
+
+    // 프로토타입 좌표 (fallback 용)
+    const PROTOTYPES = [
+      { name:"트렌드 서퍼", coords:[90,90,70] },
+      { name:"트렌드 스위머", coords:[70,65,60] },
+      { name:"트렌드 러너", coords:[80,70,40] },
+      { name:"트렌드 찍먹러", coords:[40,60,60] },
+      { name:"트렌드 불편러", coords:[60,35,40] },
+      { name:"트렌드 밸런서", coords:[60,50,75] },
+      { name:"트렌드 챌린저", coords:[45,35,75] },
+      { name:"트렌드를 거부하는 소나무", coords:[30,30,70] },
+    ];
+
+    // -------------------------------
+    // 상태
+    // -------------------------------
+    const TOTAL = 10;           // 문항 수
+    let step = 0;               // 0:소개, 1..10:문항, 11:결과
+    const answers = Array(TOTAL).fill(null); // 사용자가 고른 1..5
+
+    // 복원 (선택)
+    try{
+      const saved = JSON.parse(localStorage.getItem('trendtest_v1'));
+      if(Array.isArray(saved) && saved.length===TOTAL){ saved.forEach((v,i)=>answers[i]=v) }
+    }catch{}
+
+    // -------------------------------
+    // 채점
+    // -------------------------------
+    const rev = (x) => 6 - x;
+    const mean = (arr) => arr.reduce((a,b)=>a+b,0)/arr.length;
+    const to100 = (avg) => ((avg-1)/4)*100;
+
+    function calcScores(){
+      const [q1,q2,q3,q4,q5,q6,q7,q8,q9,q10] = answers.map(Number);
+      const S = to100(mean([q1,q2,q3,q9]));
+      const V = to100(mean([rev(q4), q5, rev(q8)]));
+      const A = to100(mean([q6,q7,q10]));
+      return {S,V,A};
+    }
+
+    function pickType(S,V,A){
+      let rule=null, type=null;
+      if(S>=80 && V>=75 && A>=60){ type = "트렌드 서퍼"; rule = "#1 서퍼" }
+      else if(S>=70 && V>=60 && A<60){ type = "트렌드 러너"; rule = "#2 러너" }
+      else if((S>=60 && V>=50 && V<75) || (S>=50 && S<70 && V>=60)){ type = "트렌드 스위머"; rule = "#3 스위머" }
+      else if(S<50 && V>=55){ type = "트렌드 찍먹러"; rule = "#4 찍먹러" }
+      else if(S>=50 && S<70 && V>=48 && V<=58 && A>=65){ type = "트렌드 밸런서"; rule = "#5 밸런서" }
+      else if(V<45 && S>=45 && A<65){ type = "트렌드 불편러"; rule = "#6 불편러" }
+      else if(V<45 && A>=65 && S<60){ type = "트렌드 챌린저"; rule = "#7 챌린저" }
+      else if(V<35 && S<40){ type = "트렌드를 거부하는 소나무"; rule = "#8 소나무" }
+
+      if(type) return {type, rule};
+      const dists = PROTOTYPES.map(p=>({ name:p.name, d:Math.hypot(S-p.coords[0], V-p.coords[1], A-p.coords[2]) }))
+                              .sort((a,b)=>a.d-b.d);
+      return { type:dists[0].name, rule:`fallback • ${dists[0].name}` };
+    }
+
+    // -------------------------------
+    // 렌더링/내비게이션
+    // -------------------------------
+    const $prog = document.getElementById('prog');
+    const $progressWrap = document.getElementById('progressWrap');
+    const $step0 = document.getElementById('step0');
+    const $stepQ = document.getElementById('stepQ');
+    const $stepR = document.getElementById('stepR');
+    const $qCard = document.getElementById('qCard');
+    const $btnPrev = document.getElementById('btnPrev');
+    const $btnNext = document.getElementById('btnNext');
+
+    function setProgress(){
+      const pct = Math.min(100, Math.max(0, step/11*100));
+      $prog.style.width = pct + '%';
+    }
+
+    function show(stepIdx){
+      step = stepIdx; setProgress();
+      [$step0,$stepQ,$stepR].forEach(el=>el.classList.remove('show'));
+      if(step===0){
+        $step0.classList.add('show');
+        $btnPrev.disabled = true; $btnPrev.classList.add('hide'); 
+        $btnNext.textContent = '시작하기';
+				$btnNext.disabled = false;
+        $progressWrap.classList.remove('hide');
+      } else if(step>=1 && step<=10){
+        renderQuestion(step);
+        $stepQ.classList.add('show');
+        $btnPrev.disabled = false; $btnPrev.classList.remove('hide');
+        $btnNext.textContent = (step===10? '결과 보기' : '다음');
+        $btnNext.disabled = (answers[step-1]==null);
+        $progressWrap.classList.remove('hide');
+      } else {
+        renderResult();
+        $stepR.classList.add('show');
+        // 결과 페이지 요구사항: 이전 버튼/우상단 진행바 숨김
+        $btnPrev.classList.add('hide');
+        $btnNext.textContent = '다시 시작';
+        $progressWrap.classList.add('hide');
+      }
+    }
+
+    function renderQuestion(n){
+      const q = QUESTIONS[n-1];
+      const current = answers[n-1];
+      const ORIENT_AGREE_LEFT = false; 
+      const values = ORIENT_AGREE_LEFT ? [5,4,3,2,1] : [1,2,3,4,5];
+      const leftLabel  = ORIENT_AGREE_LEFT ? '그렇다' : '그렇지 않다';
+      const rightLabel = ORIENT_AGREE_LEFT ? '그렇지 않다' : '그렇다';
+
+      $qCard.innerHTML = `
+        <div class="sub" style="margin-bottom:8px">문항 ${n} / ${TOTAL}</div>
+        <div class="q-title">${q.text}</div>
+        <div class="scale" role="radiogroup" aria-label="문항 ${n}">
+          <div class="likert">
+            ${values.map(v=>`
+              <label class="item" title="${v}">
+                <input type="radio" name="q${n}" value="${v}" ${current===v? 'checked':''}>
+                <span class="dot" aria-hidden="true"></span>
+                <span class="sr-only">${v}</span>
+              </label>
+            `).join('')}
+          </div>
+          <div class="labels"><span>${leftLabel}</span><span>${rightLabel}</span></div>
+        </div>
+      `;
+
+      $qCard.querySelectorAll('input[type=radio]').forEach(input=>{
+        input.addEventListener('change', (e)=>{
+          answers[n-1] = Number(e.target.value);
+          localStorage.setItem('trendtest_v1', JSON.stringify(answers));
+          $btnNext.disabled = false;
+        });
+      });
+    }
+
+    function renderResult(){
+      const {S,V,A} = calcScores();
+      const picked = pickType(S,V,A);
+      const $typeName = document.getElementById('typeName');
+      const $badge = document.getElementById('badge');
+      const $barS = document.getElementById('barS');
+      const $barV = document.getElementById('barV');
+      const $barA = document.getElementById('barA');
+      const $body = document.getElementById('resultBody');
+      const $char = document.getElementById('characterNote');
+
+      const txt = TYPE_TEXT[picked.type] || {emoji:'✨', body:'', character:''};
+      $typeName.textContent = picked.type;
+      $badge.textContent = txt.emoji + ' ' + picked.type;
+      $barS.style.width = S+'%';
+      $barV.style.width = V+'%';
+      $barA.style.width = A+'%';
+
+      $body.innerHTML = txt.body.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      $char.textContent = txt.character;
+
+      // 결과 화면에서는 뒤로가기 금지 + 선택 초기화
+      const cleared = Array(TOTAL).fill(null);
+      localStorage.removeItem('trendtest_v1');
+      for(let i=0;i<TOTAL;i++) answers[i] = cleared[i];
+    }
+
+    // 내비게이션
+    document.getElementById('btnPrev').addEventListener('click', ()=>{ if(step>0) show(step-1); });
+    document.getElementById('btnNext').addEventListener('click', ()=>{
+      if(step===0){ show(1); return; }
+      if(step>=1 && step<10){ show(step+1); return; }
+      if(step===10){ if(answers.some(v=>v==null)){ alert('모든 문항에 응답해주세요.'); return; } show(11); return; }
+      if(step===11){ show(0); }
+    });
+
+    // 내장 테스트 (#test)
+    function selfTest(){
+      const demoSets = [
+        { name:'서퍼 기대', a:[5,5,5,1,5,4,3,1,5,4] },
+        { name:'스위머 기대', a:[4,4,3,2,4,3,3,3,4,3] },
+        { name:'소나무 기대', a:[1,2,2,5,1,5,5,5,2,5] },
+        { name:'러너 기대', a:[5,4,4,2,4,2,2,3,4,2] },
+        { name:'밸런서 기대', a:[4,3,3,3,3,4,4,3,3,5] },
+        { name:'불편러 기대', a:[3,3,3,5,2,2,2,4,3,2] },
+      ];
+      demoSets.forEach(set=>{
+        for(let i=0;i<TOTAL;i++) answers[i]=set.a[i];
+        const s = calcScores();
+        const p = pickType(s.S,s.V,s.A);
+        console.log(`[테스트] ${set.name}:`, s, p.type);
+      });
+      for(let i=0;i<TOTAL;i++) answers[i]=null;
+    }
+    if(location.hash==='#test'){ selfTest(); }
+
+    // 초기 렌더
+    show(0);
+  </script>
+</body>
+</html>
+
