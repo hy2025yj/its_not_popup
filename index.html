@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>팝업 아니긴 해 온라인 리플렛</title>
 <style>
+
 :root {
   --bg: #ffffff;
   --text: #111111;
@@ -146,10 +147,28 @@ main {
   background: #fafafa;
   flex-shrink: 0;
 }
+
+/* 광고용: 1:1 정사각형 */
+.slide.ad {
+  aspect-ratio: 1 / 1;
+  background: #000;
+}
+
+/* 이미지 기본 설정 */
 .slide img {
   width: 100%;
   height: 100%;
+	transition: opacity .5s ease;
+	background: #f3f3f3;
   object-fit: cover;
+}
+
+.slide.img.loaded {
+	opacity: 1;
+}
+
+.slide img.contain {
+  object-fit: contain;
 }
 
 /* === 점 표시 (pager) === */
@@ -218,17 +237,56 @@ main {
   letter-spacing: 0.05em;
 }
 
+/* 광고 배지 */
+.ad-badge{
+  display:inline-block;
+  font-size:12px;
+  color: var(--muted);
+}
+
+/* 사진 아래 CTA 전체-버튼 바 */
+.cta-wrap{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  background: var(--bg);
+}
+.cta-btn{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  width:100%;
+  padding: 16px 16px;
+  text-decoration:none;
+  color: var(--text);
+}
+.cta-btn:active{ opacity:.7; }
+.cta-label{
+  font-size:24px;
+	font-weight: 800;
+}
+.cta-arrow{
+  width:22px;height:22px;flex:0 0 auto;
+  stroke: currentColor; fill:none;
+}
+
 /* === 스크롤 제어 === */
 body, html {
   overscroll-behavior-x: none; /* ✅ 바디에서 가로 스크롤 완전 차단 */
 }
 .carousel::-webkit-scrollbar { display: none; }
+
+.highlight {
+  color: #0066cc; /* 인스타 블루 계열 */
+  font-weight: 500;
+}
+
 </style>
 </head>
 
 <body>
 <header class="appbar">
-  <div class="logo">Instagram</div>
+  <div class="logo">instaRgram</div>
   <div class="appbar-icons">
     <svg class="icon" viewBox="0 0 24 24"><path d="M21.8 8.4c0 6.2-8.3 11.2-9.8 12-1.5-.8-9.8-5.8-9.8-12A5.7 5.7 0 0 1 8 2.8c1.6 0 3 .7 4 1.8a5.6 5.6 0 0 1 4-1.8 5.7 5.7 0 0 1 5.8 5.6Z"/></svg>
     <svg class="icon" viewBox="0 0 24 24"><path d="M20 21l-4-4m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/></svg>
@@ -253,14 +311,32 @@ async function loadPosts() {
     const res = await fetch("posts.json");
     if (!res.ok) throw new Error("posts.json 로드 실패");
     const posts = await res.json();
+		posts.forEach((p, i) => p.index = i);
+
+		  /* 맨 마지막에 광고 포스트 1개 추가 */
+			posts.push({
+				ad: true,
+				account: "trend.test",
+				date: "광고",
+				likes: 589,
+				caption: "", 
+				images: ["assets/ad/trend.png"],
+				cta: { label: "트렌드 테스트 바로가기", href: "https://example.com" }
+			});
+
     const feedEl = document.getElementById("feed");
-    posts.forEach(p => feedEl.appendChild(createCard(p)));
+		posts.forEach(p => {
+			const card = createCard(p);
+			feedEl.appendChild(card);
+			observeLazyImages(card);
+		});
   } catch (e) {
     console.error(e);
   }
 }
 
 function createCard(post) {
+	const isAd = !!post.ad || !!post.cta;
   const card = document.createElement("article");
   card.className = "card";
 
@@ -293,9 +369,15 @@ function createCard(post) {
     post.images.forEach(src => {
       const slide = document.createElement("div");
       slide.className = "slide";
+			if (isAd) slide.classList.add("ad");
+
       const img = document.createElement("img");
-      img.src = src;
+      img.dataset.src = src;
       img.alt = escapeHTML(post.caption || "photo");
+			img.loading = "lazy";
+
+			if (isAd || post.index === 0) img.classList.add("contain");
+
       slide.appendChild(img);
       carousel.appendChild(slide);
     });
@@ -316,6 +398,19 @@ function createCard(post) {
     wrap.appendChild(pager);
   }
 
+	  // --- 광고 CTA 바 (사진 아래, 좋아요 위) ---
+		let ctaEl = null;
+		if (isAd && post.cta && post.cta.href) {
+			ctaEl = document.createElement("div");
+			ctaEl.className = "cta-wrap";
+			ctaEl.innerHTML = `
+				<a class="cta-btn" href="${post.cta.href}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHTML(post.cta.label || '자세히 보기')}">
+					<span class="cta-label">${escapeHTML(post.cta.label || "자세히 보기")}</span>
+					<svg class="cta-arrow" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				</a>
+			`;
+		}
+
   // --- 액션 버튼 ---
   const actions = document.createElement("div");
   actions.className = "actions";
@@ -334,10 +429,14 @@ function createCard(post) {
   likes.textContent = `좋아요 ${post.likes || 0}`;
 
   // --- 캡션 (줄바꿈 & 보안 처리 포함) ---
-  const caption = document.createElement("div");
-  caption.className = "caption-below";
-  const safeCaption = escapeHTML(post.caption || "").replace(/\n/g, "<br>");
-  caption.innerHTML = `<span class="username">${escapeHTML(post.account || '')}</span>${safeCaption}`;
+	const keywords = ["@mindspark_official"]; // 하이라이트 단어 목록
+
+	const caption = document.createElement("div");
+	caption.className = "caption-below";
+	
+	const highlightedCaption = highlightKeywords(post.caption || "", keywords);
+	caption.innerHTML = `<span class="username">${escapeHTML(post.account || '')}</span>${highlightedCaption}`;
+	
 
   // --- 날짜 ---
   const date = document.createElement("div");
@@ -347,6 +446,7 @@ function createCard(post) {
   // --- 조립 ---
   card.appendChild(head);
   card.appendChild(wrap);
+	if (ctaEl) card.appendChild(ctaEl); 
   card.appendChild(actions);
   card.appendChild(likes);
   card.appendChild(caption);
@@ -357,14 +457,31 @@ function createCard(post) {
   return card;
 }
 
-// ✅ HTML escape (보안)
-function escapeHTML(str) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+function escapeHTML(str){
+	return str
+	.replace(/&/g,"&amp;")
+	.replace(/</g,"&lt;")
+	.replace(/>/g,"&gt;")
+	.replace(/"/g,"&quot;")
+	.replace(/'/g,"&#39;");
+}
+
+function highlightKeywords(text, keywords) {
+  let safeText = escapeHTML(text);
+
+  // 2. 줄바꿈 변환
+  safeText = safeText.replace(/\n/g, "<br>");
+
+  // 3. 특정 단어 색상 처리
+  keywords.forEach(word => {
+    const regex = new RegExp(word, "g");
+    safeText = safeText.replace(
+      regex,
+      `<span class="highlight">${word}</span>`
+    );
+  });
+
+  return safeText;
 }
 
 function initCarouselDots(carousel, dots) {
@@ -373,6 +490,31 @@ function initCarouselDots(carousel, dots) {
     dots.forEach((d, i) => d.classList.toggle("active", i === idx));
   };
   carousel.addEventListener("scroll", throttle(updateDots, 100));
+}
+
+/* === Lazy Loading === */
+const lazyObserver = new IntersectionObserver((entries, observer) => {
+  entries.forEach(entry => {
+    const img = entry.target;
+    if (entry.isIntersecting) {
+      const src = img.dataset.src;
+      if (src && !img.src) {
+        img.src = src;
+        img.onload = () => img.classList.add("loaded");
+      }
+      observer.unobserve(img);
+    }
+  });
+}, {
+  root: null,
+  rootMargin: "300px 0px",
+  threshold: 0.01
+});
+
+/* === observeLazyImages() === */
+function observeLazyImages(card) {
+  const imgs = card.querySelectorAll("img[data-src]");
+  imgs.forEach(img => lazyObserver.observe(img));
 }
 
 function throttle(fn, wait) {
