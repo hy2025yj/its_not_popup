@@ -137,6 +137,7 @@ main {
   position: relative;
   overflow: hidden;
 }
+
 .carousel {
   display: grid;
   grid-auto-flow: column;
@@ -157,6 +158,11 @@ main {
 /* 광고용: 1:1 정사각형 */
 .slide.ad {
   aspect-ratio: 1 / 1;
+  background: #000;
+}
+
+.slide.photo {
+  aspect-ratio: 16 / 9;
   background: #000;
 }
 
@@ -332,13 +338,13 @@ async function loadPosts() {
 
 function createCard(post) {
 	const isAd = !!post.ad || !!post.cta;
+	const isPhoto = post.photo
   const card = document.createElement("article");
   card.className = "card";
 
   // --- avatar: 첫 번째 이미지 사용 ---
-  const avatarSrc = (post.images && post.images.length > 0)
-    ? post.images[0]
-    : "https://i.pravatar.cc/100?img=5";
+  const avatarSrc = isPhoto
+    ? "assets/01/01_1.jpg" : post.images[0];
 
   // --- 헤더 ---
   const head = document.createElement("div");
@@ -365,6 +371,7 @@ function createCard(post) {
       const slide = document.createElement("div");
       slide.className = "slide";
 			if (isAd) slide.classList.add("ad");
+			if (isPhoto) slide.classList.add("photo");
 
       const img = document.createElement("img");
       img.dataset.src = src;
